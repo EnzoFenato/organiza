@@ -11,7 +11,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Organiza',
+      title: 'Organiza Receitas',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.indigo,
@@ -23,14 +23,49 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class PaginaPrincipal extends StatelessWidget {
+class PaginaPrincipal extends StatefulWidget {
   const PaginaPrincipal({super.key});
+
+  @override
+  State<PaginaPrincipal> createState() => _PaginaPrincipalState();
+}
+
+class _PaginaPrincipalState extends State<PaginaPrincipal> {
+  final _formKey = GlobalKey<FormState>();
+  final _pesquisaController = TextEditingController();
+
+  String? _termoPesquisado;
+
+  String _tratarTexto(String texto) {
+    return texto.trim().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  void _pesquisar() {
+    if (!_formKey.currentState!.validate()) {
+      setState(() {
+        _termoPesquisado = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _termoPesquisado = _tratarTexto(_pesquisaController.text);
+    });
+
+    FocusScope.of(context).unfocus();
+  }
+
+  @override
+  void dispose() {
+    _pesquisaController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Organiza'),
+        title: const Text('Organiza Receitas'),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
       ),
@@ -40,7 +75,7 @@ class PaginaPrincipal extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Olá! Vamos organizar seu dia?',
+              'O que vamos preparar?',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -48,7 +83,7 @@ class PaginaPrincipal extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Acompanhe suas tarefas em um só lugar.',
+              'Pesquise uma receita pelo nome.',
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.black54,
@@ -56,36 +91,48 @@ class PaginaPrincipal extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Resumo das tarefas.
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.indigo.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Row(
+            // Campo de pesquisa de receitas.
+            Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    Icons.assignment_outlined,
-                    size: 40,
-                    color: Colors.indigo,
+                  TextFormField(
+                    controller: _pesquisaController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nome da receita',
+                      hintText: 'Ex.: bolo de cenoura',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(),
+                      errorMaxLines: 3,
+                    ),
+                    textInputAction: TextInputAction.search,
+                    autovalidateMode:
+                    AutovalidateMode.onUserInteraction,
+                    validator: (valor) {
+                      if (_tratarTexto(valor ?? '').isEmpty) {
+                        return 'Digite o nome de uma receita, '
+                            'não apenas espaços.';
+                      }
+
+                      return null;
+                    },
+                    onChanged: (_) {
+                      if (_termoPesquisado != null) {
+                        setState(() {
+                          _termoPesquisado = null;
+                        });
+                      }
+                    },
+                    onFieldSubmitted: (_) => _pesquisar(),
                   ),
-                  SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Resumo do dia',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text('Você possui 3 tarefas pendentes.'),
-                      ],
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _pesquisar,
+                      icon: const Icon(Icons.search),
+                      label: const Text('Pesquisar'),
                     ),
                   ),
                 ],
@@ -93,55 +140,34 @@ class PaginaPrincipal extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            const Text(
-              'Minhas tarefas',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            const Card(
-              child: ListTile(
-                leading: Icon(Icons.radio_button_unchecked),
-                title: Text('Estudar Flutter'),
-                subtitle: Text('Revisar os conceitos de interface'),
-              ),
-            ),
-            const Card(
-              child: ListTile(
-                leading: Icon(Icons.radio_button_unchecked),
-                title: Text('Fazer a atividade'),
-                subtitle: Text('Montar a página principal'),
-              ),
-            ),
-            const Card(
-              child: ListTile(
-                leading: Icon(Icons.radio_button_unchecked),
-                title: Text('Enviar no GitHub'),
-                subtitle: Text('Publicar a primeira parte do projeto'),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'O cadastro de tarefas será desenvolvido '
-                            'nas próximas etapas.',
+            // Mensagem exibida após uma pesquisa válida.
+            if (_termoPesquisado != null)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Pesquisa recebida!',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Adicionar tarefa'),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Termo pesquisado: $_termoPesquisado',
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Os resultados das receitas serão '
+                            'implementados nas próximas etapas.',
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),
